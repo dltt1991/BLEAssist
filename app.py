@@ -371,8 +371,6 @@ class WheelchairApp:
                 self.scan_button.configure(state="disabled")
                 self.connect_button.configure(state="normal")
             elif payload in ("idle", "disconnected"):
-                if payload == "disconnected":
-                    self.connecting_device = None
                 self._set_ready(False)
                 self.scan_button.configure(state="normal")
                 self.connect_button.configure(state="normal")

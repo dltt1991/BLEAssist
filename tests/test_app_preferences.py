@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app import load_last_device, preferred_device_index, save_last_device
+from app import WheelchairApp, load_last_device, preferred_device_index, save_last_device
 from ble_controller import ScanDevice
 
 
@@ -95,6 +95,45 @@ class PreferredDeviceTests(unittest.TestCase):
 
     def test_empty_scan_has_no_selection(self):
         self.assertIsNone(preferred_device_index([], None))
+
+
+class FakeWidget:
+    def configure(self, **_options):
+        pass
+
+
+class FakeVariable:
+    def __init__(self):
+        self.value = ""
+
+    def set(self, value):
+        self.value = value
+
+    def get(self):
+        return self.value
+
+
+class ConnectionLifecycleTests(unittest.TestCase):
+    def test_cleanup_disconnect_before_connect_does_not_lose_device(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            app = WheelchairApp.__new__(WheelchairApp)
+            app.settings_path = Path(temp_dir) / "settings.json"
+            app.last_device = None
+            app.connecting_device = ScanDevice("new-uuid", "YS", object(), True)
+            app.ready = False
+            app.status_var = FakeVariable()
+            app.scan_button = FakeWidget()
+            app.connect_button = FakeWidget()
+            app.log = lambda _message: None
+            app._set_ready = lambda ready: setattr(app, "ready", ready)
+
+            for status in ("disconnected", "connecting", "handshaking", "ready"):
+                app.handle_event("status", status)
+
+            self.assertEqual(
+                load_last_device(app.settings_path),
+                {"key": "new-uuid", "name": "YS"},
+            )
 
 
 if __name__ == "__main__":
