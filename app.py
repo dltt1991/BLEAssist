@@ -4,15 +4,67 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import json
 import queue
 import threading
 import time
 import tkinter as tk
 from datetime import datetime
+from pathlib import Path
 from tkinter import scrolledtext, ttk
 
 from ble_controller import ScanDevice, WheelchairBLE
 from protocol import pointer_to_stick
+
+
+SETTINGS_PATH = Path.home() / "Library" / "Application Support" / "BLEAssist" / "settings.json"
+
+
+def load_last_device(path: Path = SETTINGS_PATH) -> dict[str, str] | None:
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+
+    device = data.get("last_device") if isinstance(data, dict) else None
+    if not isinstance(device, dict):
+        return None
+
+    key = device.get("key")
+    name = device.get("name")
+    if not isinstance(key, str) or not key.strip():
+        return None
+    if not isinstance(name, str) or not name.strip():
+        return None
+    return {"key": key, "name": name}
+
+
+def save_last_device(key: str, name: str, path: Path = SETTINGS_PATH) -> None:
+    if not isinstance(key, str) or not key.strip():
+        raise ValueError("设备标识不能为空")
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("设备名称不能为空")
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = {"last_device": {"key": key, "name": name}}
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def preferred_device_index(
+    devices: list[ScanDevice],
+    last_device: dict[str, str] | None,
+) -> int | None:
+    if not devices:
+        return None
+    if last_device:
+        for index, device in enumerate(devices):
+            if device.key == last_device["key"]:
+                return index
+        for index, device in enumerate(devices):
+            if device.name == last_device["name"]:
+                return index
+    return 0
 
 
 class BLELoopThread:
@@ -75,10 +127,13 @@ class WheelchairApp:
         "disconnected": "已断开",
     }
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, settings_path: Path = SETTINGS_PATH):
         self.root = root
         self.events: queue.Queue = queue.Queue()
         self.ble = BLELoopThread(self.events)
+        self.settings_path = Path(settings_path)
+        self.last_device = load_last_device(self.settings_path)
+        self.connecting_device: ScanDevice | None = None
         self.devices: dict[str, ScanDevice] = {}
         self.ready = False
         self.dragging = False
@@ -93,6 +148,7 @@ class WheelchairApp:
         self._build_ui()
         self._set_ready(False)
         self.root.after(50, self.poll_events)
+        self.root.after(100, self.scan)
 
     def _build_ui(self) -> None:
         outer = ttk.Frame(self.root, padding=14)
@@ -168,7 +224,7 @@ class WheelchairApp:
         log_frame.grid(row=2, column=0, columnspan=2, sticky="ew")
         self.log_widget = scrolledtext.ScrolledText(log_frame, width=76, height=10, state="disabled")
         self.log_widget.grid()
-        self.log("程序已启动；请先扫描设备。")
+        self.log("程序已启动；正在自动扫描设备。")
 
     def log(self, message: str) -> None:
         stamp = datetime.now().strftime("%H:%M:%S")
@@ -208,6 +264,7 @@ class WheelchairApp:
             return
         self.scan_button.configure(state="disabled")
         self.connect_button.configure(state="disabled")
+        self.connecting_device = device
         self.ble.submit(self.ble.controller.connect(device))
 
     def change_mode(self) -> None:
@@ -287,17 +344,35 @@ class WheelchairApp:
                 labels.append(label)
                 self.devices[label] = device
             self.device_box.configure(values=labels)
-            if labels:
-                self.device_box.current(0)
+            selected = preferred_device_index(payload, self.last_device)
+            if selected is not None:
+                self.device_box.current(selected)
+                device = payload[selected]
+                if self.last_device and (
+                    device.key == self.last_device["key"]
+                    or device.name == self.last_device["name"]
+                ):
+                    self.log(f"已选择上次连接的设备：{device.name}。")
             self.log(f"扫描完成，发现 {len(labels)} 个有名称的设备。")
         elif kind == "status":
             self.status_var.set(self.STATUS_TEXT.get(payload, str(payload)))
             self.log(f"状态：{self.status_var.get()}")
             if payload == "ready":
+                if self.connecting_device is not None:
+                    device = self.connecting_device
+                    try:
+                        save_last_device(device.key, device.name, self.settings_path)
+                    except (OSError, ValueError) as error:
+                        self.log(f"保存上次连接设备失败：{error}")
+                    else:
+                        self.last_device = {"key": device.key, "name": device.name}
+                    self.connecting_device = None
                 self._set_ready(True)
                 self.scan_button.configure(state="disabled")
                 self.connect_button.configure(state="normal")
             elif payload in ("idle", "disconnected"):
+                if payload == "disconnected":
+                    self.connecting_device = None
                 self._set_ready(False)
                 self.scan_button.configure(state="normal")
                 self.connect_button.configure(state="normal")
@@ -312,6 +387,7 @@ class WheelchairApp:
             self.status_var.set("错误")
             self.log(f"错误：{payload}")
             if not self.ready:
+                self.connecting_device = None
                 self.scan_button.configure(state="normal")
                 self.connect_button.configure(state="normal")
         elif kind == "motion":
