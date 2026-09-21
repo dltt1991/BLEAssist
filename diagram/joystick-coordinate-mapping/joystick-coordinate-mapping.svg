@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
+  <title id="title">屏幕摇杆坐标到轮椅底盘协议坐标的换算</title>
+  <desc id="desc">屏幕纵轴映射到协议X，屏幕横轴映射到协议Y，两轴均反向。中心坐标为500、500，运动帧固定使用配置1。</desc>
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#1e293b" stroke-width="0.6"/>
+    </pattern>
+    <radialGradient id="stickFill" cx="50%" cy="42%" r="65%">
+      <stop offset="0" stop-color="#164e63" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#083344" stop-opacity="0.35"/>
+    </radialGradient>
+    <radialGradient id="protocolFill" cx="50%" cy="42%" r="65%">
+      <stop offset="0" stop-color="#064e3b" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#022c22" stop-opacity="0.35"/>
+    </radialGradient>
+    <marker id="arrow-cyan" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0 0L10 4L0 8Z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrow-emerald" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0 0L10 4L0 8Z" fill="#34d399"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0 0L10 4L0 8Z" fill="#fb923c"/>
+    </marker>
+    <style>
+      text { font-family: "JetBrains Mono", "Noto Sans SC", "PingFang SC", sans-serif; }
+      .title { fill: #f8fafc; font-size: 24px; font-weight: 700; }
+      .subtitle { fill: #94a3b8; font-size: 12px; }
+      .region-title { fill: #f8fafc; font-size: 17px; font-weight: 700; }
+      .region-subtitle { fill: #94a3b8; font-size: 11px; }
+      .axis { stroke: #64748b; stroke-width: 1.5; }
+      .axis-label { fill: #cbd5e1; font-size: 11px; font-weight: 600; }
+      .direction { fill: #f8fafc; font-size: 12px; font-weight: 700; }
+      .value { fill: #94a3b8; font-size: 10px; }
+      .frame { fill: #67e8f9; font-size: 10px; font-weight: 600; }
+      .formula { fill: #f8fafc; font-size: 14px; font-weight: 600; }
+      .mapping { fill: #f8fafc; font-size: 13px; font-weight: 700; }
+      .note { fill: #cbd5e1; font-size: 11px; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="760" fill="#0f172a"/>
+  <rect width="1440" height="760" fill="url(#grid)"/>
+
+  <text x="48" y="48" class="title">摇杆坐标换算 · Screen → Protocol</text>
+  <text x="48" y="72" class="subtitle">轴交换 + 方向反转｜中心值 500｜范围 400…600｜运动配置固定为 1</text>
+
+  <rect x="40" y="100" width="400" height="530" rx="18" fill="#0f172a" stroke="#22d3ee" stroke-width="1.5"/>
+  <rect x="480" y="100" width="480" height="530" rx="18" fill="#0f172a" stroke="#fb923c" stroke-width="1.5"/>
+  <rect x="1000" y="100" width="400" height="530" rx="18" fill="#0f172a" stroke="#34d399" stroke-width="1.5"/>
+
+  <text x="64" y="132" class="region-title">① 屏幕摇杆坐标</text>
+  <text x="64" y="153" class="region-subtitle">Tkinter canvas · 归一化单位圆</text>
+
+  <line x1="90" y1="365" x2="390" y2="365" class="axis" marker-end="url(#arrow-cyan)"/>
+  <line x1="240" y1="215" x2="240" y2="515" class="axis" marker-end="url(#arrow-cyan)"/>
+  <circle cx="240" cy="365" r="140" fill="url(#stickFill)" stroke="#22d3ee" stroke-width="2"/>
+  <circle cx="240" cy="365" r="8" fill="#22d3ee"/>
+  <circle cx="240" cy="365" r="23" fill="none" stroke="#67e8f9" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <text x="240" y="184" text-anchor="middle" class="direction">前推</text>
+  <text x="240" y="201" text-anchor="middle" class="value">screen_y = −1</text>
+  <text x="240" y="550" text-anchor="middle" class="direction">后拉</text>
+  <text x="240" y="567" text-anchor="middle" class="value">screen_y = +1</text>
+  <text x="58" y="350" class="direction">左推</text>
+  <text x="58" y="369" class="value">screen_x = −1</text>
+  <text x="422" y="350" text-anchor="end" class="direction">右推</text>
+  <text x="422" y="369" text-anchor="end" class="value">screen_x = +1</text>
+  <text x="240" y="359" text-anchor="middle" class="direction">中心</text>
+  <text x="240" y="388" text-anchor="middle" class="value">(0, 0)</text>
+  <text x="240" y="604" text-anchor="middle" class="region-subtitle">screen_x² + screen_y² ≤ 1</text>
+
+  <text x="504" y="132" class="region-title">② 轴交换与换算</text>
+  <text x="504" y="153" class="region-subtitle">两个屏幕轴分别驱动不同的协议字段</text>
+
+  <path d="M555 240C650 240 685 335 885 335" fill="none" stroke="#fb923c" stroke-width="3" marker-end="url(#arrow-orange)"/>
+  <path d="M555 335C650 335 685 240 885 240" fill="none" stroke="#22d3ee" stroke-width="3" marker-end="url(#arrow-cyan)"/>
+
+  <rect x="510" y="207" width="155" height="62" rx="10" fill="#0f172a"/>
+  <rect x="510" y="207" width="155" height="62" rx="10" fill="#083344" fill-opacity="0.55" stroke="#22d3ee"/>
+  <text x="587" y="233" text-anchor="middle" class="mapping">screen_y</text>
+  <text x="587" y="253" text-anchor="middle" class="value">上 −1 · 下 +1</text>
+
+  <rect x="510" y="302" width="155" height="62" rx="10" fill="#0f172a"/>
+  <rect x="510" y="302" width="155" height="62" rx="10" fill="#083344" fill-opacity="0.55" stroke="#22d3ee"/>
+  <text x="587" y="328" text-anchor="middle" class="mapping">screen_x</text>
+  <text x="587" y="348" text-anchor="middle" class="value">左 −1 · 右 +1</text>
+
+  <rect x="775" y="207" width="155" height="62" rx="10" fill="#0f172a"/>
+  <rect x="775" y="207" width="155" height="62" rx="10" fill="#064e3b" fill-opacity="0.55" stroke="#34d399"/>
+  <text x="852" y="233" text-anchor="middle" class="mapping">protocol_y</text>
+  <text x="852" y="253" text-anchor="middle" class="value">左 600 · 右 400</text>
+
+  <rect x="775" y="302" width="155" height="62" rx="10" fill="#0f172a"/>
+  <rect x="775" y="302" width="155" height="62" rx="10" fill="#064e3b" fill-opacity="0.55" stroke="#34d399"/>
+  <text x="852" y="328" text-anchor="middle" class="mapping">protocol_x</text>
+  <text x="852" y="348" text-anchor="middle" class="value">前 600 · 后 400</text>
+
+  <text x="720" y="397" text-anchor="middle" class="mapping" fill="#fb923c">screen_y → protocol_x</text>
+  <text x="720" y="423" text-anchor="middle" class="mapping" fill="#22d3ee">screen_x → protocol_y</text>
+  <text x="720" y="448" text-anchor="middle" class="region-subtitle">两轴均反向：正输入使协议值减小</text>
+
+  <rect x="515" y="478" width="410" height="112" rx="12" fill="#0f172a"/>
+  <rect x="515" y="478" width="410" height="112" rx="12" fill="#78350f" fill-opacity="0.25" stroke="#fbbf24"/>
+  <text x="720" y="516" text-anchor="middle" class="formula">protocol_x = round(500 − screen_y × 100)</text>
+  <text x="720" y="550" text-anchor="middle" class="formula">protocol_y = round(500 − screen_x × 100)</text>
+  <text x="720" y="576" text-anchor="middle" class="region-subtitle">中心 500 · 满量程偏移 ±100</text>
+
+  <text x="1024" y="132" class="region-title">③ 底盘协议坐标</text>
+  <text x="1024" y="153" class="region-subtitle">Y2C + XXX + YYY + 1 + S</text>
+
+  <line x1="1050" y1="365" x2="1350" y2="365" class="axis" marker-end="url(#arrow-emerald)"/>
+  <line x1="1200" y1="215" x2="1200" y2="515" class="axis" marker-end="url(#arrow-emerald)"/>
+  <circle cx="1200" cy="365" r="140" fill="url(#protocolFill)" stroke="#34d399" stroke-width="2"/>
+  <circle cx="1200" cy="365" r="8" fill="#34d399"/>
+  <circle cx="1200" cy="365" r="23" fill="none" stroke="#6ee7b7" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <text x="1200" y="174" text-anchor="middle" class="direction">前进 · (600, 500)</text>
+  <text x="1200" y="193" text-anchor="middle" class="frame">Y2C6005001S</text>
+  <text x="1200" y="550" text-anchor="middle" class="direction">后退 · (400, 500)</text>
+  <text x="1200" y="569" text-anchor="middle" class="frame">Y2C4005001S</text>
+  <text x="1018" y="335" class="direction">左转</text>
+  <text x="1018" y="354" class="value">(500, 600)</text>
+  <text x="1018" y="373" class="frame">Y2C5006001S</text>
+  <text x="1382" y="335" text-anchor="end" class="direction">右转</text>
+  <text x="1382" y="354" text-anchor="end" class="value">(500, 400)</text>
+  <text x="1382" y="373" text-anchor="end" class="frame">Y2C5004001S</text>
+  <text x="1200" y="358" text-anchor="middle" class="direction">中心</text>
+  <text x="1200" y="382" text-anchor="middle" class="value">(500, 500)</text>
+  <text x="1200" y="402" text-anchor="middle" class="frame">Y2C5005001S</text>
+  <text x="1200" y="604" text-anchor="middle" class="region-subtitle">协议范围 400…600</text>
+
+  <rect x="40" y="660" width="1360" height="62" rx="12" fill="#111827" stroke="#475569"/>
+  <circle cx="70" cy="691" r="6" fill="#22d3ee"/>
+  <text x="86" y="695" class="note">输入超出圆周时先投影到单位圆</text>
+  <circle cx="440" cy="691" r="6" fill="#fb923c"/>
+  <text x="456" y="695" class="note">协议字段发生轴交换并反向</text>
+  <circle cx="798" cy="691" r="6" fill="#34d399"/>
+  <text x="814" y="695" class="note">运动帧尾部固定为配置 1</text>
+  <text x="1370" y="695" text-anchor="end" class="region-subtitle">数值与 protocol.py 保持一致</text>
+</svg>
